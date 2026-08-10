@@ -777,6 +777,23 @@ button { touch-action: manipulation; }
 .page-content .gloss strong,
 .page-content .gloss em { color: inherit; font-weight: inherit; font-style: inherit; }
 
+/* A caveat reads differently from a definition. Used where a source makes a
+   claim that research does not confirm — the reader must be able to tell the
+   two apart at a glance, without the note shouting. */
+.page-content .gloss.unverified {
+  color: #7a4a1e;
+  border-left: 2px solid rgba(180, 95, 30, 0.55);
+  padding-left: 7px;
+  margin-left: 2px;
+  background: rgba(200, 144, 96, 0.09);
+  border-radius: 0 3px 3px 0;
+}
+:root[data-page-theme='night'] .page-content .gloss.unverified {
+  color: #d79a5c;
+  border-left-color: rgba(215, 154, 92, 0.5);
+  background: rgba(215, 154, 92, 0.08);
+}
+
 .page-content a {
   color: var(--burgundy);
   border-bottom: 1px dotted var(--gold);
