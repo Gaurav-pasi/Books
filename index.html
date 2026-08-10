@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>Private Library</title>
+  <meta name="theme-color" content="#0e0805" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <!-- Everything is local: no CDN, no font host. Nothing external can inject
+       script onto the page where the master password is typed, and the whole
+       reader works offline. -->
+  <link rel="stylesheet" href="assets/css/fonts.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <!-- Login Screen -->
+  <section id="login-screen" class="screen screen-login">
+    <div class="login-card">
+      <div class="login-emblem">📚</div>
+      <h1>The Private Library</h1>
+      <p class="login-subtitle">Enter the keyphrase to unlock</p>
+      <form id="login-form" autocomplete="off">
+        <input
+          type="password"
+          id="password"
+          placeholder="••••••••••"
+          autocomplete="new-password"
+          spellcheck="false"
+          required
+        />
+        <button id="unlock-btn" type="submit">UNLOCK</button>
+        <p id="login-error" role="alert"></p>
+      </form>
+      <p class="login-note">
+        🔒 AES-256-GCM • PBKDF2-SHA256 × 310,000 iterations
+      </p>
+    </div>
+  </section>
+
+  <!-- Library Screen -->
+  <section id="library-screen" class="screen screen-library" hidden>
+    <header class="library-header">
+      <h1>📚 The Library</h1>
+      <button id="logout-btn" type="button">🔒 Lock</button>
+    </header>
+    <div class="library-body">
+      <div id="book-grid" class="book-grid" aria-label="Books"></div>
+    </div>
+    <footer class="library-footer">
+      <span id="library-count"></span>
+    </footer>
+  </section>
+
+  <!-- Reader Screen -->
+  <section id="reader-screen" class="screen screen-reader" hidden>
+    <header class="reader-header">
+      <button id="back-to-library" type="button" aria-label="Back to library">← Library</button>
+      <h2 id="reader-title"></h2>
+      <div class="reader-tools">
+        <button id="bookmark-btn" type="button" aria-label="Bookmark this section" title="Bookmark">☆</button>
+        <button id="panel-btn" type="button" aria-label="Contents, bookmarks and notes" title="Contents / Bookmarks / Notes">☰</button>
+        <button id="font-smaller" type="button" aria-label="Decrease text size" title="Smaller text">A−</button>
+        <button id="font-larger" type="button" aria-label="Increase text size" title="Larger text">A+</button>
+        <span id="page-indicator" aria-live="polite"></span>
+      </div>
+    </header>
+
+    <!-- Slide-in panel: contents, bookmarks, notes, search -->
+    <div id="panel-backdrop" class="panel-backdrop" hidden></div>
+    <aside id="side-panel" class="side-panel" hidden aria-label="Reader panel">
+      <div class="panel-head">
+        <div class="panel-tabs" role="tablist">
+          <button class="panel-tab is-active" data-tab="contents" role="tab" type="button">Contents</button>
+          <button class="panel-tab" data-tab="marks" role="tab" type="button">Marks</button>
+          <button class="panel-tab" data-tab="search" role="tab" type="button">Search</button>
+        </div>
+        <button id="panel-close" type="button" aria-label="Close panel">✕</button>
+      </div>
+
+      <div class="panel-body">
+        <section id="tab-contents" class="panel-pane"></section>
+
+        <section id="tab-marks" class="panel-pane" hidden>
+          <div class="note-editor">
+            <label for="note-text" id="note-section-label">Note on this section</label>
+            <textarea id="note-text" rows="4" placeholder="What does this mean for you? What will you actually do?"></textarea>
+            <div class="note-actions">
+              <button id="note-save" type="button">Save note</button>
+              <button id="note-delete" type="button">Delete</button>
+            </div>
+          </div>
+          <div id="marks-list"></div>
+        </section>
+
+        <section id="tab-search" class="panel-pane" hidden>
+          <input type="search" id="search-input" placeholder="Search this library…" autocomplete="off" />
+          <div id="search-results"></div>
+        </section>
+      </div>
+
+      <div class="panel-foot">
+        <button id="theme-btn" type="button">🌙 Night page</button>
+      </div>
+    </aside>
+    <div class="flipbook-stage">
+      <button id="prev-page" class="nav-btn nav-btn-prev" type="button" aria-label="Previous page">‹</button>
+      <div id="flipbook" class="flipbook" role="document"></div>
+      <button id="next-page" class="nav-btn nav-btn-next" type="button" aria-label="Next page">›</button>
+    </div>
+    <div class="reader-footer">
+      <input type="range" id="page-slider" min="0" max="0" value="0" aria-label="Jump to page" />
+    </div>
+  </section>
+
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="loading-overlay" hidden>
+    <div class="spinner"></div>
+    <p id="loading-text">Decrypting…</p>
+  </div>
+
+  <!-- Page-flip library (StPageFlip) — self-hosted, see assets/vendor/ -->
+  <script src="assets/vendor/page-flip.browser.js" defer></script>
+  <script src="assets/js/paginate.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
+</body>
+</html>

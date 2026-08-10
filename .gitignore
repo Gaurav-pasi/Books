@@ -1,0 +1,15 @@
+node_modules/
+.env
+source/
+_ledger/
+docs/
+test-screenshots/
+Transcripts/
+Books Pdf/
+SESSION_LOG.md
+*.log
+*.pdf
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

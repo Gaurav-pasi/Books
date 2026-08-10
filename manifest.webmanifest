@@ -1,0 +1,19 @@
+{
+  "name": "The Private Library",
+  "short_name": "Library",
+  "description": "A password-protected, encrypted personal book library.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e0805",
+  "theme_color": "#0e0805",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
