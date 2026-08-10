@@ -8,7 +8,8 @@
     "build": "node scripts/encrypt.mjs",
     "encrypt": "node scripts/encrypt.mjs",
     "serve": "npx --yes http-server -p 8080 -c-1",
-    "test": "node scripts/test-paginate.mjs && node scripts/test-app-smoke.mjs"
+    "test": "node scripts/test-paginate.mjs && node scripts/test-app-smoke.mjs",
+    "audit": "node scripts/audit-book.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
