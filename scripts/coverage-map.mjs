@@ -44,6 +44,9 @@ export const TOPIC_BOOKS = [
   // house. Without these two, that knowledge would have been dropped.
   'money-wealth',
   'communication-charisma',
+  // Split out of great-thinkers: 30 sections spanned two different subjects,
+  // and one 40 KB book could not hold both honestly.
+  'political-dark',
 ];
 
 function extractSections(file) {
