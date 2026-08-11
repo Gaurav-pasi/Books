@@ -287,10 +287,16 @@ function setMarks(bookId, marks) {
 // Position is stored as {page, anchor}. Pagination depends on device size and
 // font scale, so the raw page index is only a fallback — the anchor (id of the
 // first element on that page) is what actually survives a reflow.
-function savePosition(bookId, pageIndex) {
+function savePosition(bookId, pageIndex, total) {
   if (!bookId) return;
   const all = loadJson(POS_KEY, {});
-  all[bookId] = { page: pageIndex, anchor: pageAnchors[pageIndex] || null, at: Date.now() };
+  const prev = all[bookId] || {};
+  all[bookId] = {
+    page: pageIndex,
+    anchor: pageAnchors[pageIndex] || null,
+    total: total || prev.total || 0,
+    at: Date.now(),
+  };
   saveJson(POS_KEY, all);
 }
 function getPosition(bookId) {
@@ -376,12 +382,23 @@ function renderLibrary() {
     card.tabIndex = 0;
     card.setAttribute('role', 'button');
     card.setAttribute('aria-label', `Open ${book.title}`);
+    // Reading progress, if this book has been opened before. Page counts are
+    // device-dependent, so the stored total is only a rough guide — good
+    // enough to show "you're part way in", which is what pulls you back.
+    const pos = getPosition(book.id);
+    const pct =
+      pos && pos.total > 1
+        ? Math.min(100, Math.round((pos.page / (pos.total - 1)) * 100))
+        : 0;
+
     card.innerHTML = `
       <div class="book-cover-content">
         <h3>${escapeHtml(book.title)}</h3>
         ${book.subtitle ? `<p class="book-subtitle">${escapeHtml(book.subtitle)}</p>` : ''}
       </div>
       <p class="book-author">${escapeHtml(book.author || '')}</p>
+      ${pct > 0 ? `<span class="book-progress-label">${pct}%</span>` : ''}
+      ${pct > 0 ? `<div class="book-progress"><span style="width:${pct}%"></span></div>` : ''}
     `;
     const open = () => openBook(book);
     card.addEventListener('click', open);
@@ -645,7 +662,7 @@ function initFlipbook(book, restoreTo) {
   pageFlip.on('flip', (e) => {
     pageSlider.value = e.data;
     updatePageIndicator(e.data, total);
-    if (currentBook) savePosition(currentBook.id, e.data);
+    if (currentBook) savePosition(currentBook.id, e.data, total);
     updateBookmarkButton();
     if (!sidePanel.hidden) renderActiveTab();
   });

@@ -1245,3 +1245,126 @@ button { touch-action: manipulation; }
 :root[data-page-theme='night'] .page-content h1::after {
   background: var(--paper);
 }
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   Goals: stronger contrast, more depth on the shelf, and visible
+   reading progress so a half-finished book pulls you back.
+   ============================================================ */
+
+/* Shelf: on wider screens let the grid breathe instead of forcing 2 columns. */
+@media (min-width: 700px) {
+  .book-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 26px;
+  }
+}
+@media (min-width: 1100px) {
+  .book-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 30px; }
+}
+
+/* Lift the book off the shelf on hover — the whole card, not just a shadow. */
+.book-card {
+  will-change: transform;
+  isolation: isolate;
+}
+.book-card:hover,
+.book-card:focus-visible {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow:
+    0 24px 46px rgba(0, 0, 0, 0.62),
+    0 8px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(232, 201, 122, 0.35),
+    inset -3px 0 6px rgba(0, 0, 0, 0.35),
+    inset 2px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Warm light across the cover, so the shelf doesn't read as flat rectangles. */
+.book-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0%, transparent 38%),
+    radial-gradient(120% 80% at 50% 120%, rgba(0, 0, 0, 0.34), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.book-cover-content, .book-author { position: relative; z-index: 1; }
+
+/* Title contrast: a heavy blur behind the text instead of a hard shadow. */
+.book-card h3 {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+/* Reading progress — the strongest pull back into an unfinished book. */
+.book-progress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 2;
+}
+.book-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  box-shadow: 0 0 10px rgba(232, 201, 122, 0.6);
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.book-progress-label {
+  position: absolute;
+  bottom: 10px; right: 12px;
+  z-index: 2;
+  font-size: 0.66rem;
+  letter-spacing: 0.6px;
+  color: var(--gold-bright);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(232, 201, 122, 0.28);
+  border-radius: 999px;
+  padding: 2px 8px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Library header: give the shelf a title with some presence. */
+.library-header h1 { letter-spacing: 1.5px; }
+#library-count {
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: #b39c78;
+  text-transform: uppercase;
+}
+
+/* Login: calmer and more inviting now the crypto line is gone. */
+.login-emblem { font-size: 3rem; margin-bottom: 16px; }
+.login-card { padding-bottom: 32px; }
+.login-subtitle { margin-bottom: 26px; }
+
+/* Reader chrome: quieter, so the page is the brightest thing on screen. */
+.reader-header { background: rgba(12, 7, 3, 0.94); }
+.nav-btn {
+  background: rgba(30, 18, 10, 0.55);
+  border: 1px solid rgba(107, 52, 16, 0.5);
+  color: #e6d4b3;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: all 0.2s;
+}
+.nav-btn:hover { border-color: var(--gold); color: var(--gold-bright); transform: scale(1.06); }
+
+/* The page itself: a touch more warmth and a softer edge. */
+.page {
+  box-shadow:
+    inset 0 0 60px rgba(160, 120, 70, 0.09),
+    inset 0 0 0 1px rgba(120, 85, 45, 0.14);
+}
+
+/* Slider: make it feel like a real control rather than a default input. */
+#page-slider { accent-color: var(--gold); cursor: pointer; }
+
+/* Respect reduced motion for the card lift too. */
+@media (prefers-reduced-motion: reduce) {
+  .book-card:hover, .book-card:focus-visible { transform: none; }
+  .book-card { animation: none !important; }
+}

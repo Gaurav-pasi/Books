@@ -31,6 +31,21 @@ const FABRICATED_QUOTES = [
   { text: 'power over your mind', who: 'Marcus Aurelius' },
 ];
 
+// Heavy Hindi/Sanskrit words a reader would have to look up. Simple Hinglish
+// means Hindi + English mixed — so where the Hindi word is hard, the ENGLISH
+// word is the simpler, correct choice. Flagged because these crept in once and
+// made whole passages unreadable without a dictionary.
+const NEEDS_DICTIONARY = [
+  'kasauti', 'virasat', 'andhbhakti', 'tiraskaar', 'kroorta', 'jaivik',
+  'granth', 'prachin', 'bhavishyavani', 'nirikshan', 'swatantra', 'vyakhya',
+  'dastavez', 'anuyayi', 'naitik', 'shasak', 'oonch-neech', 'matbhed',
+  'vivadit', 'samarthan', 'sanskriti', 'parampara', 'dhaancha', 'maapdand',
+  'nichod', 'khandan', 'saancho', 'saanche', 'virodhi', 'aadhyatmik',
+  'srishti', 'farmaan', 'rissav', 'gawahi', 'anumaan', 'jaayza', 'jaayze',
+  'gunjaish', 'swarth', 'uttaradhikari', 'vinamrata', 'sahanasheelta',
+  'vishwayudh', 'rajneetik', 'tarteeb', 'paimana', 'daayre', 'vistaar',
+];
+
 const SIZE_WARN_KB = 45; // "on point, not long"
 
 function auditBook(file) {
@@ -50,6 +65,13 @@ function auditBook(file) {
   const lower = md.toLowerCase();
   for (const idiom of BANNED_IDIOMS) {
     if (lower.includes(idiom)) warnings.push(`banned idiom/loanword: "${idiom}"`);
+  }
+
+  const heavy = NEEDS_DICTIONARY.filter((w) => lower.includes(w));
+  if (heavy.length) {
+    errors.push(
+      `words needing a dictionary (use the English word instead): ${heavy.join(', ')}`
+    );
   }
 
   // --- provenance --------------------------------------------------------
