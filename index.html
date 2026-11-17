@@ -13,6 +13,7 @@
        reader works offline. -->
   <link rel="stylesheet" href="assets/css/fonts.css" />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/redesign.css" />
 </head>
 <body>
   <!-- Login Screen -->
@@ -43,7 +44,9 @@
       <button id="logout-btn" type="button">🔒 Lock</button>
     </header>
     <div class="library-body">
-      <div id="book-grid" class="book-grid" aria-label="Books"></div>
+      <section id="continue-reading" class="continue-card" hidden aria-label="Continue reading"></section>
+      <h2 class="shelf-title" id="shelf-title">Your shelf</h2>
+      <div id="book-grid" class="book-grid" aria-labelledby="shelf-title"></div>
     </div>
     <footer class="library-footer">
       <span id="library-count"></span>
@@ -54,16 +57,46 @@
   <section id="reader-screen" class="screen screen-reader" hidden>
     <header class="reader-header">
       <button id="back-to-library" type="button" aria-label="Back to library">←<span class="btn-label"> Library</span></button>
-      <h2 id="reader-title"></h2>
+      <div class="reader-titles">
+        <h2 id="reader-title"></h2>
+        <p id="reader-chapter" class="reader-chapter"></p>
+      </div>
       <div class="reader-tools">
-        <button id="bookmark-btn" type="button" aria-label="Bookmark this section" title="Bookmark">☆</button>
-        <button id="panel-btn" type="button" aria-label="Contents, bookmarks and notes" title="Contents / Bookmarks / Notes">☰</button>
-        <button id="font-smaller" type="button" aria-label="Decrease text size" title="Smaller text">A−</button>
-        <button id="font-larger" type="button" aria-label="Increase text size" title="Larger text">A+</button>
+        <button id="bookmark-btn" type="button" aria-label="Bookmark this section" title="Bookmark (B)">☆</button>
+        <button id="panel-btn" type="button" aria-label="Contents, bookmarks and notes" title="Contents / Marks / Search (C)">☰</button>
+        <button id="settings-btn" type="button" aria-label="Reading settings" aria-expanded="false" aria-controls="settings-pop" title="Reading settings">Aa</button>
         <button id="fullscreen-btn" type="button" aria-label="Full-screen reading" aria-pressed="false" title="Full-screen reading (F)">⛶</button>
-        <span id="page-indicator" aria-live="polite"></span>
       </div>
     </header>
+
+    <!-- Reading settings popover -->
+    <div id="settings-pop" class="settings-pop" hidden role="dialog" aria-label="Reading settings">
+      <div class="set-row">
+        <span class="set-label">Text size</span>
+        <div class="set-ctrl stepper">
+          <button id="font-smaller" type="button" aria-label="Decrease text size">A−</button>
+          <output id="font-size-out" aria-live="polite">100%</output>
+          <button id="font-larger" type="button" aria-label="Increase text size">A+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Page colour</span>
+        <div class="set-ctrl swatches" role="radiogroup" aria-label="Page colour">
+          <button type="button" class="swatch swatch-day" data-theme="day" role="radio" aria-checked="false"><span>Paper</span></button>
+          <button type="button" class="swatch swatch-sepia" data-theme="sepia" role="radio" aria-checked="false"><span>Sepia</span></button>
+          <button type="button" class="swatch swatch-night" data-theme="night" role="radio" aria-checked="false"><span>Night</span></button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Line spacing</span>
+        <div class="set-ctrl segmented" role="radiogroup" aria-label="Line spacing">
+          <button type="button" data-lh="compact" role="radio" aria-checked="false">Tight</button>
+          <button type="button" data-lh="normal" role="radio" aria-checked="false">Normal</button>
+          <button type="button" data-lh="relaxed" role="radio" aria-checked="false">Airy</button>
+        </div>
+      </div>
+      <p class="set-hint"><kbd>←</kbd> <kbd>→</kbd> turn · <kbd>F</kbd> full screen · <kbd>B</kbd> bookmark · <kbd>C</kbd> contents</p>
+    </div>
 
     <!-- Slide-in panel: contents, bookmarks, notes, search -->
     <div id="panel-backdrop" class="panel-backdrop" hidden></div>
@@ -108,8 +141,12 @@
       <button id="next-page" class="nav-btn nav-btn-next" type="button" aria-label="Next page">›</button>
     </div>
     <div class="reader-footer">
+      <span id="page-indicator" aria-live="polite"></span>
       <input type="range" id="page-slider" min="0" max="0" value="0" aria-label="Jump to page" />
+      <span id="progress-pct" class="progress-pct"></span>
     </div>
+    <div class="read-progress" aria-hidden="true"><span id="read-progress-bar"></span></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </section>
 
   <!-- Loading overlay -->

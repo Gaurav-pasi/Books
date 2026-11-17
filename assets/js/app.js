@@ -181,6 +181,8 @@ let pageAnchors = [];
 // contents list and gives bookmarks/notes a human-readable label.
 let anchorLabels = {};
 let anchorOrder = [];
+// flipbook page index -> chapter (h1) title, for the header and progress.
+let chapterAt = [];
 
 // ------------------------------------------------------------
 // DOM refs
@@ -224,6 +226,14 @@ const searchInput = $('search-input');
 const searchResults = $('search-results');
 const themeBtn = $('theme-btn');
 const fullscreenBtn = $('fullscreen-btn');
+const readerChapter = $('reader-chapter');
+const settingsBtn = $('settings-btn');
+const settingsPop = $('settings-pop');
+const fontSizeOut = $('font-size-out');
+const progressPct = $('progress-pct');
+const readProgressBar = $('read-progress-bar');
+const toastEl = $('toast');
+const continueEl = $('continue-reading');
 
 // ------------------------------------------------------------
 // Reading preferences + saved position (localStorage, per device)
@@ -257,12 +267,42 @@ function applyFontScale() {
   );
   if (fontSmaller) fontSmaller.disabled = prefs.fontStep === 0;
   if (fontLarger) fontLarger.disabled = prefs.fontStep === FONT_STEPS.length - 1;
+  if (fontSizeOut) fontSizeOut.textContent = Math.round(FONT_STEPS[prefs.fontStep] * 100) + '%';
 }
 
+const PAGE_THEMES = ['day', 'sepia', 'night'];
+if (!PAGE_THEMES.includes(prefs.pageTheme)) prefs.pageTheme = 'day';
+const LINE_HEIGHTS = { compact: 1.55, normal: 1.72, relaxed: 1.9 };
+if (!LINE_HEIGHTS[prefs.lineHeight]) prefs.lineHeight = 'normal';
+
 function applyPageTheme() {
-  const night = prefs.pageTheme === 'night';
-  document.documentElement.setAttribute('data-page-theme', night ? 'night' : 'day');
-  if (themeBtn) themeBtn.textContent = night ? '☀ Day page' : '🌙 Night page';
+  const theme = prefs.pageTheme;
+  document.documentElement.setAttribute('data-page-theme', theme);
+  if (themeBtn) themeBtn.textContent = theme === 'night' ? '☀ Day page' : '🌙 Night page';
+  document.querySelectorAll('.swatch').forEach((b) =>
+    b.setAttribute('aria-checked', String(b.dataset.theme === theme))
+  );
+}
+
+function applyLineHeight() {
+  document.documentElement.style.setProperty('--reader-lh', String(LINE_HEIGHTS[prefs.lineHeight]));
+  document.querySelectorAll('[data-lh]').forEach((b) =>
+    b.setAttribute('aria-checked', String(b.dataset.lh === prefs.lineHeight))
+  );
+}
+
+// Brief confirmation for actions with no other visible result.
+let toastTimer;
+function showToast(msg) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  toastEl.classList.remove('is-out');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastEl.classList.add('is-out');
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, 250);
+  }, 1600);
 }
 
 // ------------------------------------------------------------
@@ -374,7 +414,111 @@ async function tryAutoUnlock() {
 // ------------------------------------------------------------
 // Library rendering
 // ------------------------------------------------------------
+// Reading progress, if this book has been opened before. Page counts are
+// device-dependent, so the stored total is only a rough guide — good enough
+// to show "you're part way in", which is what pulls you back.
+function bookProgress(book) {
+  const pos = getPosition(book.id);
+  return pos && pos.total > 1
+    ? Math.min(100, Math.round((pos.page / (pos.total - 1)) * 100))
+    : 0;
+}
+
+// Rough reading time at ~200 words a minute (Hinglish reads a bit slower than
+// English prose). Cached on the book — it never changes within a build.
+function readingMinutes(book) {
+  if (book._minutes == null) {
+    const words = (book.html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+    book._minutes = Math.max(1, Math.round(words / 200));
+  }
+  return book._minutes;
+}
+function formatDuration(min) {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m >= 10 ? `${h} h ${m} min` : `${h} h`;
+}
+
+// Chapter title around a stored anchor, read from the book HTML so it works
+// without paginating the book first.
+function chapterNameForAnchor(book, anchor) {
+  const html = book.html || '';
+  const at = anchor ? html.indexOf(`id="${anchor}"`) : -1;
+  if (at < 0) return '';
+  let name = '';
+  const re = /<h1[^>]*>([\s\S]*?)<\/h1>/g;
+  let m;
+  while ((m = re.exec(html)) && m.index <= at) name = m[1];
+  const tmp = document.createElement('div');
+  tmp.innerHTML = name;
+  return (tmp.textContent || '').trim();
+}
+
+function renderContinue() {
+  if (!continueEl) return;
+  const all = loadJson(POS_KEY, {});
+  let best = null;
+  for (const book of library.books) {
+    const pos = all[book.id];
+    if (pos && pos.page > 0 && (!best || (pos.at || 0) > (best.pos.at || 0))) best = { book, pos };
+  }
+  if (!best) {
+    continueEl.hidden = true;
+    continueEl.innerHTML = '';
+    return;
+  }
+  const { book, pos } = best;
+  const pct = bookProgress(book);
+  const chapter = chapterNameForAnchor(book, pos.anchor);
+  const left = Math.max(1, Math.round(readingMinutes(book) * (1 - pct / 100)));
+  continueEl.hidden = false;
+  continueEl.innerHTML = `
+    <button type="button" class="continue-cover" style="background:${book.cover}" aria-label="Resume ${escapeHtml(book.title)}">
+      <span>${escapeHtml(book.title)}</span>
+    </button>
+    <div class="continue-body">
+      <p class="continue-kicker">Continue reading</p>
+      <h2 class="continue-title">${escapeHtml(book.title)}</h2>
+      ${chapter ? `<p class="continue-chapter">${escapeHtml(chapter)}</p>` : ''}
+      <div class="continue-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Progress">
+        <span style="width:${pct}%"></span>
+      </div>
+      <p class="continue-meta">${pct}% read · about ${formatDuration(left)} left</p>
+      <button type="button" class="continue-btn">Resume reading →</button>
+    </div>`;
+  const open = () => openBook(book);
+  continueEl.querySelector('.continue-btn').addEventListener('click', open);
+  continueEl.querySelector('.continue-cover').addEventListener('click', open);
+}
+
+// Gentle 3D tilt that follows the pointer — mouse/trackpad only, and never
+// when the reader has asked the OS for reduced motion.
+const canTilt =
+  !!window.matchMedia &&
+  matchMedia('(hover: hover) and (pointer: fine)').matches &&
+  !matchMedia('(prefers-reduced-motion: reduce)').matches;
+function addTilt(card) {
+  if (!canTilt) return;
+  card.addEventListener('pointermove', (e) => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    card.style.setProperty('--tilt-x', `${(-y * 8).toFixed(2)}deg`);
+    card.style.setProperty('--tilt-y', `${(x * 10).toFixed(2)}deg`);
+    card.style.setProperty('--shine-x', `${((x + 0.5) * 100).toFixed(1)}%`);
+    card.style.setProperty('--shine-y', `${((y + 0.5) * 100).toFixed(1)}%`);
+    card.classList.add('is-tilting');
+  });
+  card.addEventListener('pointerleave', () => {
+    card.classList.remove('is-tilting');
+    card.style.removeProperty('--tilt-x');
+    card.style.removeProperty('--tilt-y');
+  });
+}
+
 function renderLibrary() {
+  renderContinue();
   bookGrid.innerHTML = '';
   for (const book of library.books) {
     const card = document.createElement('div');
@@ -383,27 +527,28 @@ function renderLibrary() {
     card.tabIndex = 0;
     card.setAttribute('role', 'button');
     card.setAttribute('aria-label', `Open ${book.title}`);
-    // Reading progress, if this book has been opened before. Page counts are
-    // device-dependent, so the stored total is only a rough guide — good
-    // enough to show "you're part way in", which is what pulls you back.
-    const pos = getPosition(book.id);
-    const pct =
-      pos && pos.total > 1
-        ? Math.min(100, Math.round((pos.page / (pos.total - 1)) * 100))
-        : 0;
+    const pct = bookProgress(book);
+    const status =
+      pct >= 100 ? '<span class="book-status is-done">✓ Finished</span>'
+      : pct > 0 ? `<span class="book-status">${pct}% read</span>`
+      : '<span class="book-status is-new">New</span>';
 
     card.innerHTML = `
       <div class="book-cover-content">
         <h3>${escapeHtml(book.title)}</h3>
         ${book.subtitle ? `<p class="book-subtitle">${escapeHtml(book.subtitle)}</p>` : ''}
       </div>
-      <p class="book-author">${escapeHtml(book.author || '')}</p>
-      ${pct > 0 ? `<span class="book-progress-label">${pct}%</span>` : ''}
+      <div class="book-foot">
+        <p class="book-author">${escapeHtml(book.author || '')}</p>
+        <p class="book-meta"><span>⏱ ${formatDuration(readingMinutes(book))}</span>${status}</p>
+      </div>
       ${pct > 0 ? `<div class="book-progress"><span style="width:${pct}%"></span></div>` : ''}
+      <span class="book-shine" aria-hidden="true"></span>
     `;
     const open = () => openBook(book);
     card.addEventListener('click', open);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    addTilt(card);
     bookGrid.appendChild(card);
   }
   libraryCount.textContent =
@@ -532,6 +677,13 @@ function initFlipbook(book, restoreTo) {
 
   const stage = document.querySelector('.flipbook-stage');
   const { pageW, pageH } = computePageSize(stage);
+  // Type and margins scale with the page, so a big full-screen page gets
+  // bigger, easier text instead of the same small text and empty space.
+  // ~26 page-widths per em keeps lines around 50–65 characters.
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty('--page-font', `${Math.min(21, Math.max(16, pageW / 26)).toFixed(2)}px`);
+  rootStyle.setProperty('--page-pad-x', `${Math.round(Math.min(56, Math.max(18, pageW * 0.075)))}px`);
+  rootStyle.setProperty('--page-pad-y', `${Math.round(Math.min(52, Math.max(20, pageH * 0.05)))}px`);
 
   // Read padding from CSS by inspecting a temporary .page element
   const sample = document.createElement('div');
@@ -561,6 +713,8 @@ function initFlipbook(book, restoreTo) {
   pageAnchors = [];
   anchorLabels = {};
   anchorOrder = [];
+  chapterAt = [''];
+  let chapterNow = '';
   const frag = document.createDocumentFragment();
 
   const front = document.createElement('div');
@@ -579,6 +733,9 @@ function initFlipbook(book, restoreTo) {
     const p = document.createElement('div');
     p.className = 'page';
     p.innerHTML = `<div class="page-content">${pageHtml[i]}</div>`;
+    const h1 = p.querySelector('h1');
+    if (h1) chapterNow = (h1.textContent || '').trim();
+    chapterAt[i + 1] = chapterNow;
     // Index every element with an id on this page → its flipbook page index
     const flipIndex = i + 1;
     p.querySelectorAll('[id]').forEach((el) => {
@@ -608,6 +765,7 @@ function initFlipbook(book, restoreTo) {
     </div>
   `;
   frag.appendChild(back);
+  chapterAt.push('');
 
   fb.appendChild(frag);
 
@@ -672,12 +830,19 @@ function initFlipbook(book, restoreTo) {
 }
 
 function updatePageIndicator(current, total) {
-  pageIndicator.textContent = `Page ${current + 1} / ${total}`;
+  pageIndicator.textContent = `${current + 1} / ${total}`;
+  const pct = total > 1 ? Math.round((current / (total - 1)) * 100) : 0;
+  if (progressPct) progressPct.textContent = `${pct}%`;
+  if (readProgressBar) readProgressBar.style.width = `${pct}%`;
+  if (readerChapter) readerChapter.textContent = chapterAt[current] || '';
+  pageSlider.style.setProperty('--fill', `${pct}%`);
 }
 
 backBtn.addEventListener('click', () => {
   closePanel();
+  setSettingsOpen(false);
   setImmersive(false);
+  if (library) renderLibrary(); // refresh progress + "continue reading"
   if (pageFlip) {
     try { pageFlip.destroy(); } catch {}
     pageFlip = null;
@@ -865,6 +1030,7 @@ bookmarkBtn.addEventListener('click', () => {
   if (idx >= 0) marks.bookmarks.splice(idx, 1);
   else marks.bookmarks.push({ anchor: here, at: Date.now() });
   setMarks(currentBook.id, marks);
+  showToast(idx >= 0 ? 'Bookmark removed' : `★ Bookmarked: ${labelFor(here)}`);
   updateBookmarkButton();
   if (!sidePanel.hidden && activeTab() === 'marks') renderMarks();
 });
@@ -879,6 +1045,7 @@ noteSave.addEventListener('click', () => {
   else delete marks.notes[here];
   setMarks(currentBook.id, marks);
   renderMarks();
+  showToast(text ? 'Note saved' : 'Note removed');
 });
 
 noteDelete.addEventListener('click', () => {
@@ -991,6 +1158,40 @@ themeBtn.addEventListener('click', () => {
   applyPageTheme();
 });
 
+// Reading settings popover
+function setSettingsOpen(open) {
+  if (!settingsPop) return;
+  settingsPop.hidden = !open;
+  settingsBtn.setAttribute('aria-expanded', String(open));
+}
+if (settingsBtn) {
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSettingsOpen(settingsPop.hidden);
+  });
+}
+document.addEventListener('click', (e) => {
+  if (settingsPop && !settingsPop.hidden && !settingsPop.contains(e.target) && e.target !== settingsBtn) {
+    setSettingsOpen(false);
+  }
+});
+document.querySelectorAll('.swatch').forEach((b) =>
+  b.addEventListener('click', () => {
+    prefs.pageTheme = b.dataset.theme;
+    saveJson(PREFS_KEY, prefs);
+    applyPageTheme();
+  })
+);
+document.querySelectorAll('[data-lh]').forEach((b) =>
+  b.addEventListener('click', () => {
+    if (prefs.lineHeight === b.dataset.lh) return;
+    prefs.lineHeight = b.dataset.lh;
+    saveJson(PREFS_KEY, prefs);
+    applyLineHeight();
+    if (currentBook && pageFlip) repaginate(currentAnchorState());
+  })
+);
+
 // Text size. Re-paginates at the new scale, holding the reader's place.
 function changeFontStep(delta) {
   const next = prefs.fontStep + delta;
@@ -1014,13 +1215,18 @@ document.addEventListener('keydown', (e) => {
   const typing = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
   if (e.key === 'Escape') {
     // Escape backs out one layer at a time: panel first, then the reader.
-    if (!sidePanel.hidden) closePanel();
+    if (settingsPop && !settingsPop.hidden) setSettingsOpen(false);
+    else if (!sidePanel.hidden) closePanel();
     else if (immersive) setImmersive(false);
     else backBtn.click();
     return;
   }
   if (typing || !sidePanel.hidden) return;
-  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setImmersive(!immersive); return; }
+  const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
+  const k = (e.key || '').toLowerCase();
+  if (plain && k === 'f') { e.preventDefault(); setImmersive(!immersive); return; }
+  if (plain && k === 'b') { e.preventDefault(); bookmarkBtn.click(); return; }
+  if (plain && k === 'c') { e.preventDefault(); openPanel('contents'); return; }
   if (e.key === 'ArrowLeft') { e.preventDefault(); pageFlip && pageFlip.flipPrev(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); pageFlip && pageFlip.flipNext(); }
 });
@@ -1097,6 +1303,7 @@ logoutBtn.addEventListener('click', async () => {
 showScreen('login');
 applyFontScale();
 applyPageTheme();
+applyLineHeight();
 
 // Offline support. Fails harmlessly on file:// or any non-secure origin.
 if ('serviceWorker' in navigator) {

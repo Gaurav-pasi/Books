@@ -14,7 +14,7 @@
  * and is never touched here.
  */
 
-const SHELL_CACHE = 'library-shell-v3';
+const SHELL_CACHE = 'library-shell-v4';
 const DATA_CACHE = 'library-data-v1';
 
 const SHELL_ASSETS = [
@@ -23,6 +23,7 @@ const SHELL_ASSETS = [
   'manifest.webmanifest',
   'favicon.svg',
   'assets/css/style.css',
+  'assets/css/redesign.css',
   'assets/css/fonts.css',
   'assets/js/app.js',
   'assets/js/paginate.js',

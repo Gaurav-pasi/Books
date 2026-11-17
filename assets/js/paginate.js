@@ -172,6 +172,11 @@ function paginateHtmlForBox(html, contentW, contentH) {
 
     // Chapter-level headings always start a fresh page.
     if (isChapterHeading(cloned) && buffer.children.length > 0) {
+      // A divider right before a chapter break is redundant (the fresh page
+      // is the break), and on its own it leaves a near-blank page.
+      while (buffer.lastElementChild && buffer.lastElementChild.tagName === 'HR') {
+        buffer.removeChild(buffer.lastElementChild);
+      }
       flushPage();
     }
 
