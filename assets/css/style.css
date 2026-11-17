@@ -14,6 +14,9 @@
   --paper: #f6ecd6;
   --paper-shade: #ecdfbf;
   --paper-edge: #d8c39a;
+  --paper-top: #fcf3df;
+  --paper-tint: rgba(180, 140, 80, 0.10);
+  --gold-ink: #9a6234;   /* gold dark enough to read on paper (3.8:1+) */
   --ink: #3a2418;
   --ink-soft: #5a3a28;
   --burgundy: #5a2818;
@@ -162,7 +165,7 @@ button { touch-action: manipulation; }
   min-height: 50px;
   transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
 }
-#password::placeholder { color: rgba(241, 228, 199, 0.35); letter-spacing: 4px; }
+#password::placeholder { color: rgba(241, 228, 199, 0.55); letter-spacing: 4px; }
 #password:focus {
   outline: none;
   border-color: var(--gold-bright);
@@ -402,7 +405,7 @@ button { touch-action: manipulation; }
   border-top: 1px solid var(--border);
   text-align: center;
   font-size: 0.78rem;
-  opacity: 0.55;
+  opacity: 0.8;
   font-style: italic;
   flex-shrink: 0;
   letter-spacing: 0.5px;
@@ -555,10 +558,10 @@ button { touch-action: manipulation; }
 .page {
   background:
     /* subtle vignette darker at edges to mimic real paper depth */
-    radial-gradient(ellipse 90% 100% at 50% 100%, rgba(180, 140, 80, 0.10), transparent 60%),
-    radial-gradient(ellipse 90% 100% at 50% 0%, rgba(180, 140, 80, 0.06), transparent 60%),
+    radial-gradient(ellipse 90% 100% at 50% 100%, var(--paper-tint), transparent 60%),
+    radial-gradient(ellipse 90% 100% at 50% 0%, var(--paper-tint), transparent 60%),
     /* paper gradient — warm but not yellow */
-    linear-gradient(180deg, #fcf3df 0%, var(--paper) 35%, var(--paper-shade) 100%);
+    linear-gradient(180deg, var(--paper-top) 0%, var(--paper) 35%, var(--paper-shade) 100%);
   color: var(--ink);
   padding: 24px 22px 28px;
   overflow: hidden;
@@ -673,7 +676,7 @@ button { touch-action: manipulation; }
 
 .page-content ul, .page-content ol { margin: 6px 0 6px 22px; }
 .page-content li { margin: 2px 0; }
-.page-content ul li::marker { color: var(--gold); }
+.page-content ul li::marker, .page-content ol li::marker { color: var(--gold-ink); }
 
 /* Pull quotes / blockquotes — magazine style */
 .page-content blockquote {
@@ -801,7 +804,7 @@ button { touch-action: manipulation; }
   word-break: break-word;
   transition: color 0.15s;
 }
-.page-content a:hover { color: var(--gold); }
+.page-content a:hover { color: var(--burgundy-deep); border-bottom-style: solid; border-bottom-color: var(--burgundy); }
 
 /* Selection — gold highlight on book pages */
 .page-content ::selection {
@@ -1238,7 +1241,17 @@ button { touch-action: manipulation; }
   --ink: #cbbb9e;
   --ink-soft: #a8977c;
   --burgundy: #d9a066;
+  --burgundy-deep: #f0c48e;
+  --paper-top: #1d1813;
+  --paper-tint: rgba(0, 0, 0, 0.18);
+  --gold-ink: #c89060;
 }
+:root[data-page-theme='night'] .page-content th {
+  background: rgba(200, 144, 96, 0.2);
+  color: #f0d2a6;
+}
+:root[data-page-theme='night'] .page-content ::selection { color: #fff3dc; }
+:root[data-page-theme='night'] .page-content code { background: rgba(232, 201, 122, 0.1); }
 :root[data-page-theme='night'] .page-content pre {
   background: linear-gradient(180deg, #0d0906, #080503);
 }
@@ -1285,8 +1298,11 @@ button { touch-action: manipulation; }
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0%, transparent 38%),
-    radial-gradient(120% 80% at 50% 120%, rgba(0, 0, 0, 0.34), transparent 60%);
+    linear-gradient(115deg, rgba(255, 255, 255, 0.10) 0%, transparent 38%),
+    /* contrast scrim: covers fade to light colours bottom-right, so darken
+       there and under the author line to keep white text >= 4.5:1 */
+    linear-gradient(0deg, rgba(0, 0, 0, 0.45) 0%, transparent 38%),
+    linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.45) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -1368,3 +1384,7 @@ button { touch-action: manipulation; }
   .book-card:hover, .book-card:focus-visible { transform: none; }
   .book-card { animation: none !important; }
 }
+
+/* Contrast: author/subtitle lines stay readable on every cover colour. */
+.book-author { opacity: 0.92; }
+.book-subtitle { opacity: 1; }
