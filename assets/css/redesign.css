@@ -377,7 +377,7 @@ kbd {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .continue-cover:hover { transform: translateY(-3px) rotate(-1deg); }
-.continue-body { min-width: 0; }
+.continue-body { min-width: 0; max-width: 560px; }
 .continue-kicker {
   font-size: 0.7rem;
   letter-spacing: 2px;
