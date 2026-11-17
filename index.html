@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <title>Private Library</title>
@@ -53,13 +53,14 @@
   <!-- Reader Screen -->
   <section id="reader-screen" class="screen screen-reader" hidden>
     <header class="reader-header">
-      <button id="back-to-library" type="button" aria-label="Back to library">← Library</button>
+      <button id="back-to-library" type="button" aria-label="Back to library">←<span class="btn-label"> Library</span></button>
       <h2 id="reader-title"></h2>
       <div class="reader-tools">
         <button id="bookmark-btn" type="button" aria-label="Bookmark this section" title="Bookmark">☆</button>
         <button id="panel-btn" type="button" aria-label="Contents, bookmarks and notes" title="Contents / Bookmarks / Notes">☰</button>
         <button id="font-smaller" type="button" aria-label="Decrease text size" title="Smaller text">A−</button>
         <button id="font-larger" type="button" aria-label="Increase text size" title="Larger text">A+</button>
+        <button id="fullscreen-btn" type="button" aria-label="Full-screen reading" aria-pressed="false" title="Full-screen reading (F)">⛶</button>
         <span id="page-indicator" aria-live="polite"></span>
       </div>
     </header>

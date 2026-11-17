@@ -1388,3 +1388,73 @@ button { touch-action: manipulation; }
 /* Contrast: author/subtitle lines stay readable on every cover colour. */
 .book-author { opacity: 0.92; }
 .book-subtitle { opacity: 1; }
+
+/* ============================================================
+   FULL-SCREEN READING + MOBILE-FIRST READER
+   ============================================================ */
+
+/* Respect notches / home indicators (viewport-fit=cover in index.html). */
+.library-header, .reader-header {
+  padding-top: max(10px, env(safe-area-inset-top));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+.reader-footer, .library-footer {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Phones: every pixel goes to the page. Swipe or tap the page edge to turn,
+   so the arrow buttons only steal width here. */
+@media (max-width: 599px) {
+  .nav-btn { display: none; }
+  .flipbook-stage { padding: 6px 4px; }
+  .page { padding: 20px 18px 22px; }
+  .reader-header { gap: 6px; padding-bottom: 8px; }
+  .reader-header h2 { font-size: 0.8rem; }
+  .reader-tools { gap: 4px; }
+  .reader-tools button { min-width: 36px; padding: 0 6px; }
+  #back-to-library { padding: 9px 11px; }
+  #back-to-library .btn-label { display: none; }
+  #page-indicator { display: none; }      /* the slider already shows position */
+  .reader-footer { padding-top: 10px; }
+}
+/* Very narrow phones: the title would squeeze the buttons, so drop it. */
+@media (max-width: 360px) {
+  .reader-header h2 { display: none; }
+  .reader-tools { margin-left: auto; }
+}
+
+/* Full-screen reading: a slim, quiet bar and nothing else around the page. */
+#fullscreen-btn { font-size: 1rem; }
+#fullscreen-btn[aria-pressed='true'] { color: var(--gold-bright); border-color: var(--gold); }
+
+.screen-reader.is-immersive { background: #0a0503; }
+.screen-reader.is-immersive .reader-header {
+  padding-top: max(4px, env(safe-area-inset-top));
+  padding-bottom: 4px;
+  background: transparent;
+  border-bottom: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  justify-content: flex-end;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+.screen-reader.is-immersive .reader-header:hover,
+.screen-reader.is-immersive .reader-header:focus-within { opacity: 1; }
+.screen-reader.is-immersive .reader-header::after,
+.screen-reader.is-immersive #back-to-library,
+.screen-reader.is-immersive .reader-header h2,
+.screen-reader.is-immersive #bookmark-btn,
+.screen-reader.is-immersive #font-smaller,
+.screen-reader.is-immersive #font-larger,
+.screen-reader.is-immersive .reader-footer,
+.screen-reader.is-immersive .nav-btn { display: none; }
+.screen-reader.is-immersive .reader-tools button {
+  min-width: 32px; min-height: 32px;
+  background: rgba(20, 12, 7, 0.6);
+}
+.screen-reader.is-immersive #page-indicator { display: inline; font-size: 0.75rem; }
+.screen-reader.is-immersive .flipbook-stage {
+  padding: 0 max(4px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
+}

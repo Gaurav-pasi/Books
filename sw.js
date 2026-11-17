@@ -14,7 +14,7 @@
  * and is never touched here.
  */
 
-const SHELL_CACHE = 'library-shell-v2';
+const SHELL_CACHE = 'library-shell-v3';
 const DATA_CACHE = 'library-data-v1';
 
 const SHELL_ASSETS = [

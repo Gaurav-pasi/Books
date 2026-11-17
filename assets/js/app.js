@@ -223,6 +223,7 @@ const noteSectionLabel = $('note-section-label');
 const searchInput = $('search-input');
 const searchResults = $('search-results');
 const themeBtn = $('theme-btn');
+const fullscreenBtn = $('fullscreen-btn');
 
 // ------------------------------------------------------------
 // Reading preferences + saved position (localStorage, per device)
@@ -475,35 +476,35 @@ function currentAnchorState() {
 }
 
 // Compute target page dimensions based on stage size.
+// Pages fill the space they are given rather than holding a fixed 2:3 book
+// shape — on a phone that shape wasted a third of the screen. The aspect is
+// only clamped at the extremes, and width is capped so lines never get so
+// long they are tiring to read on a big monitor.
+const PAGE_MAX_W = 680;
 function computePageSize(stage) {
-  const stageW = Math.max(stage.clientWidth - 12, 280);
-  const stageH = Math.max(stage.clientHeight - 12, 380);
-  const aspect = 2 / 3; // page aspect
+  const stageW = Math.max(stage.clientWidth - 12, 260);
+  const stageH = Math.max(stage.clientHeight - 12, 360);
+  // Arrow buttons are hidden on phones and in full-screen mode; only reserve
+  // room for them when they are actually on screen.
+  const arrows = (prevBtn.offsetWidth || 0) + (nextBtn.offsetWidth || 0);
+  const availW = Math.max(stageW - (arrows ? arrows + 24 : 0), 260);
 
-  // Spread (two-page) when stage is wide enough for ~760px+
-  const wide = stageW >= 760;
   let pageW, pageH;
-  if (wide) {
-    const reservedForArrows = 100;
-    const availW = stageW - reservedForArrows;
-    if (stageH * (2 * aspect) <= availW) {
-      pageH = stageH;
-      pageW = pageH * aspect;
-    } else {
-      pageW = availW / 2;
-      pageH = pageW / aspect;
-    }
+  if (isSpread(stage)) {
+    pageH = stageH;
+    pageW = Math.min(availW / 2, pageH * 0.78, PAGE_MAX_W);
+    if (pageW < pageH * 0.55) pageH = pageW / 0.55; // very narrow: keep a book shape
   } else {
-    // Single-page mode (mobile)
-    if (stageH * aspect <= stageW) {
-      pageH = stageH;
-      pageW = pageH * aspect;
-    } else {
-      pageW = stageW;
-      pageH = pageW / aspect;
-    }
+    pageH = stageH;
+    pageW = Math.min(availW, PAGE_MAX_W, pageH * 0.85); // landscape phone: don't go wider than tall
+    if (pageW < pageH * 0.42) pageH = pageW / 0.42;
   }
-  return { pageW: Math.floor(pageW), pageH: Math.floor(pageH) };
+  return { pageW: Math.floor(pageW), pageH: Math.floor(Math.min(pageH, stageH)) };
+}
+
+// Two-page spread once there is room for two comfortably wide pages.
+function isSpread(stage) {
+  return stage.clientWidth >= 760 && stage.clientWidth / Math.max(stage.clientHeight, 1) > 1.05;
 }
 
 // paginateHtmlForBox() lives in assets/js/paginate.js (loaded before this
@@ -611,7 +612,7 @@ function initFlipbook(book, restoreTo) {
   fb.appendChild(frag);
 
   // Single-page on narrow viewports, spread on tablet+
-  const wantSpread = stage.clientWidth >= 760;
+  const wantSpread = isSpread(stage);
 
   pageFlip = new St.PageFlip(fb, {
     width: pageW,
@@ -676,6 +677,7 @@ function updatePageIndicator(current, total) {
 
 backBtn.addEventListener('click', () => {
   closePanel();
+  setImmersive(false);
   if (pageFlip) {
     try { pageFlip.destroy(); } catch {}
     pageFlip = null;
@@ -1013,23 +1015,68 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     // Escape backs out one layer at a time: panel first, then the reader.
     if (!sidePanel.hidden) closePanel();
+    else if (immersive) setImmersive(false);
     else backBtn.click();
     return;
   }
   if (typing || !sidePanel.hidden) return;
+  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setImmersive(!immersive); return; }
   if (e.key === 'ArrowLeft') { e.preventDefault(); pageFlip && pageFlip.flipPrev(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); pageFlip && pageFlip.flipNext(); }
 });
 
-// Reflow page-flip on resize / orientation
+// Reflow page-flip on resize / orientation / full-screen changes
 let resizeTimer;
-window.addEventListener('resize', () => {
+function scheduleRelayout() {
   if (!pageFlip || !currentBook) return;
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    repaginate(currentAnchorState());
-  }, 250);
-});
+  resizeTimer = setTimeout(() => repaginate(currentAnchorState()), 250);
+}
+window.addEventListener('resize', scheduleRelayout);
+
+// ------------------------------------------------------------
+// Full-screen reading
+// Hides the header, slider and arrows so the page gets the whole screen, and
+// asks the browser for real full screen where it can (desktop, Android).
+// iPhone Safari has no element full screen, so there the reader still gets
+// the chrome-free layout — and "Add to Home Screen" removes the browser bar.
+// ------------------------------------------------------------
+let immersive = false;
+const fsTarget = document.documentElement;
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function enterBrowserFullscreen() {
+  try {
+    const req = fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen;
+    if (req && !fsElement()) {
+      const p = req.call(fsTarget, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch {}
+}
+function exitBrowserFullscreen() {
+  try {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit && fsElement()) {
+      const p = exit.call(document);
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch {}
+}
+function setImmersive(on) {
+  if (immersive === on) return;
+  immersive = on;
+  readerScreen.classList.toggle('is-immersive', on);
+  fullscreenBtn.setAttribute('aria-pressed', String(on));
+  fullscreenBtn.textContent = on ? '⤡' : '⛶';
+  fullscreenBtn.title = on ? 'Exit full screen (F)' : 'Full-screen reading (F)';
+  if (on) enterBrowserFullscreen(); else exitBrowserFullscreen();
+  scheduleRelayout();
+}
+fullscreenBtn.addEventListener('click', () => setImmersive(!immersive));
+// The browser's own exit (Esc, swipe-down, F11) must drop the reader out too.
+['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) =>
+  document.addEventListener(ev, () => { if (!fsElement() && immersive) setImmersive(false); })
+);
 
 // Logout
 logoutBtn.addEventListener('click', async () => {
